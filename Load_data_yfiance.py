@@ -18,6 +18,9 @@ from plotly.subplots import make_subplots
 from scipy.optimize import fmin
 from scipy.optimize import minimize,least_squares,dual_annealing,differential_evolution
 
+from BS_model import black_scholes_call, implied_vol
+
+
 def idx_min(data):
     moneyness = np.abs(data["S0"]-data["strike"])
     return data.loc[moneyness.idxmin()]
