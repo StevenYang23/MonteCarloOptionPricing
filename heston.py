@@ -1,10 +1,11 @@
 
 import numpy as np
 from scipy.optimize import minimize
-
+np.random.seed(8309)
 i = complex(0,1)
 
 def heston_simulation(S0,r,q,K,T,v0,kappa,theta,rho,sigma,paths,steps):
+  np.random.seed(8309)
   dt = T/steps
   S_path = np.zeros((steps+1,paths))
   V_path = np.zeros((steps+1,paths))

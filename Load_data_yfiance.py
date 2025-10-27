@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from BS_model import implied_vol
+np.random.seed(8309)
 
 
 def idx_min(data):

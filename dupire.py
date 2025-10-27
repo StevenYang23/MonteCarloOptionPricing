@@ -1,5 +1,6 @@
 import numpy as np
 from BS_model import black_scholes_call
+np.random.seed(8309)
 
 def C(K,T,params):
     S,r,impvol_interp = params
@@ -22,3 +23,19 @@ def get_local_vol_surface(calls,params):
         for j in range(KK.shape[1]):
             local_vol_surface[i,j] = dupire(KK[i,j],TT[i,j],params)
     return local_vol_surface
+def get_local_vol_path(params,K,T,N):
+    T_path = np.linspace(0,T,N)
+    V_path = np.zeros_like(T_path)
+    for i in range(T_path.shape[0]):
+        V_path[i] = dupire(K,T_path[i],params)
+    return V_path
+def dupire_simulation(K,S0,T,N,M,params):
+    np.random.seed(8309)
+    dt = 1 / 252
+    V_path = get_local_vol_path(params,K,T,N)
+    dW = np.random.normal(0, np.sqrt(dt), size=(N, M))
+    S_path = np.zeros((N+1, M))
+    S_path[0] = S0
+    for t in range(1, N+1):
+        S_path[t] = S_path[t-1] + V_path[t-1] * dW[t-1]
+    return S_path, V_path

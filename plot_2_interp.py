@@ -4,8 +4,8 @@ from plotly.subplots import make_subplots
 
 def plot_two_interp(interp, regres, calls):
     # Create shared grid
-    strike_range = np.linspace(calls['strike'].min(), calls['strike'].max(), 40)
-    ttm_range = np.linspace(calls['ttm'].min(), calls['ttm'].max(), 40)
+    strike_range = np.linspace(calls['strike'].min(), calls['strike'].max(), 60)
+    ttm_range = np.linspace(calls['ttm'].min(), calls['ttm'].max(), 60)
     strike_grid, ttm_grid = np.meshgrid(strike_range, ttm_range)
     # Evaluate surfaces
     cubic_surface = interp(strike_grid.ravel(), ttm_grid.ravel()).reshape(strike_grid.shape)

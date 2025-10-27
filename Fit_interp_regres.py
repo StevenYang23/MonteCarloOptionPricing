@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from scipy.interpolate import CloughTocher2DInterpolator
+np.random.seed(8309)
 
 def get_poly_features(strike, ttm):
     strike = np.asarray(strike)
