@@ -37,8 +37,6 @@ def get_param_garch(ticker):
     # Step 2: Compute log-returns (in decimal; scale to % if preferred)
     returns = np.log(df / df.shift(1)).dropna().values
     n = len(returns)
-    log_return = np.mean(returns)
-    std_return = np.std(returns)
 
     # Step 3: GARCH(1,1) negative log-likelihood function
     def garch_loglik(params, returns):
@@ -49,6 +47,7 @@ def get_param_garch(ticker):
         loglik = 0.0
         
         for t in range(1, n):
+            # minimize the negative log-likelihood
             sigma2[t] = omega + alpha * returns[t-1]**2 + beta * sigma2[t-1]
             if sigma2[t] <= 0:  # Penalize invalid variances
                 return 1e10
