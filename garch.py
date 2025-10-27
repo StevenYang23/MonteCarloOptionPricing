@@ -5,32 +5,28 @@ from scipy.optimize import minimize
 import warnings
 warnings.filterwarnings('ignore')
 
-def Garch_simulation(omega, alpha, beta, N, M, T, S0, r, q):
+def Garch_simulation(omega, alpha, beta, mu_annual, vol_annual, N, M, T, S0):
     np.random.seed(8309)
-    dt = T / N
-    uncond_var = omega / (1 - alpha - beta)
-    paths = np.empty((M, N + 1))
-    paths[:, 0] = S0  # Vectorized init
-    for m in range(M):
-        sigma2 = np.zeros(N + 1)
-        log_returns = np.zeros(N)
-        sigma2[0] = uncond_var
-        for t in range(1, N + 1):
-            # GARCH update
-            prev_return_sq = 0 if t == 1 else log_returns[t - 2] ** 2
-            sigma2[t] = omega + alpha * prev_return_sq + beta * sigma2[t - 1]
-            # Risk-neutral log-return
-            drift = (r - q) * dt - 0.5 * sigma2[t]
-            shock = np.sqrt(sigma2[t]) * np.random.normal()
-            log_returns[t - 1] = drift + shock
-            # Update path
-            paths[m, t] = paths[m, t - 1] * np.exp(log_returns[t - 1])
-    return paths.T
+    dt = T / N  # Time increment per step
+    noise = np.zeros((M, N + 1))
+    sigt = np.zeros((M, N + 1))
+    CRN = np.random.normal(0, 1, (M, N + 1))
+    sigt[:, 0] = (vol_annual ** 2 * dt)  # Initial per-step conditional variance
+    noise[:, 0] = np.sqrt(sigt[:, 0]) * CRN[:, 0]  # Fixed: Use sqrt(sigt) consistently
+
+    for t in range(1, N + 1):
+        sigt[:, t] = omega + alpha * noise[:, t - 1] ** 2 + beta * sigt[:, t - 1]
+        noise[:, t] = np.sqrt(sigt[:, t]) * CRN[:, t]
+
+    rtn = np.zeros((M, N + 1))
+    rtn[:, 1:] = (mu_annual * dt) + noise[:, 1:]  # Per-step drift scaled by dt
+    paths = S0 * np.exp(np.cumsum(rtn, axis=1))
+    return paths.T, sigt.T  # Transposed for (time, paths) and (time, M) shapes
 
 def get_param_garch(ticker):
     # Step 1: Fetch historical SPX data (adjust dates as needed)
     ticker = ticker
-    start_date = "2024-10-27"
+    start_date = "2025-9-27"
     end_date = "2025-10-27"
     df = yf.download(ticker, start=start_date, end=end_date)['Close']
 

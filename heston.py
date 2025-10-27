@@ -6,8 +6,6 @@ i = complex(0,1)
 
 def heston_simulation(S0,r,q,K,T,v0,kappa,theta,rho,sigma,M,N):
     np.random.seed(8309)
-# def heston_model_sim(S0, v0, rho, kappa, theta, sigma,T, N, M):
-
     dt = T/N
     mu = np.array([0,0])
     cov = np.array([[1,rho],
@@ -26,7 +24,20 @@ def heston_simulation(S0,r,q,K,T,v0,kappa,theta,rho,sigma,M,N):
 
     return S, v
 
-
+# def heston_simulation(S0,r,q,K,T,v0,kappa,theta,rho,sigma,M,N):
+#     dt = T/N
+#     S_path = np.zeros((N+1,M))
+#     V_path = np.zeros((N+1,M))
+#     S_path[0] = S0
+#     V_path[0] = v0
+#     for step in range(1,N+1):
+#         rn1 = np.random.standard_normal(M) 
+#         rn2 = np.random.standard_normal(M)
+#         rn2 = rho*rn1 + np.sqrt(1-rho**2)*rn2  
+#         S_path[step] = S_path[step - 1] * np.exp((r-q-0.5*V_path[step-1])*dt + np.sqrt(V_path[step-1])*np.sqrt(dt)*rn1) #几何布朗运动的解
+#         V_path[step] = (np.sqrt(V_path[step - 1]) + sigma/2*np.sqrt(dt)*rn2)**2 + kappa*(theta-V_path[step - 1])*dt - sigma**2/4*dt 
+#         V_path[step] = np.maximum(V_path[step],0)
+#     return S_path,V_path
 
 class Heston_SLSQP:
     def __init__(self,S0,r,q,K,T,option_value,opt_paras):
