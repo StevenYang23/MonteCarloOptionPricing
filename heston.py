@@ -4,20 +4,30 @@ from scipy.optimize import minimize
 np.random.seed(8309)
 i = complex(0,1)
 
-def heston_simulation(S0,r,q,K,T,v0,kappa,theta,rho,sigma,paths,steps):
-  np.random.seed(8309)
-  dt = T/steps
-  S_path = np.zeros((steps+1,paths))
-  V_path = np.zeros((steps+1,paths))
-  S_path[0] = S0
-  V_path[0] = v0
-  for step in range(1,steps+1):
-      rn1 = np.random.standard_normal(paths)
-      rn2 = np.random.standard_normal(paths)
-      rn2 = rho*rn1 + np.sqrt(1-rho**2)*rn2  #cholesky
-      S_path[step] = S_path[step - 1] * np.exp((r-q-0.5*V_path[step-1])*dt + np.sqrt(V_path[step-1])*np.sqrt(dt)*rn1) #GBM
-      V_path[step] = (np.sqrt(V_path[step - 1]) + sigma/2*np.sqrt(dt)*rn2)**2 + kappa*(theta-V_path[step - 1])*dt - sigma**2/4*dt
-  return S_path,V_path
+def heston_simulation(S0,r,q,K,T,v0,kappa,theta,rho,sigma,M,N):
+    np.random.seed(8309)
+# def heston_model_sim(S0, v0, rho, kappa, theta, sigma,T, N, M):
+
+    dt = T/N
+    mu = np.array([0,0])
+    cov = np.array([[1,rho],
+                    [rho,1]])
+
+    # arrays for storing prices and variances
+    S = np.full(shape=(N+1,M), fill_value=S0)
+    v = np.full(shape=(N+1,M), fill_value=v0)
+
+    # sampling correlated brownian motions under risk-neutral measure
+    Z = np.random.multivariate_normal(mu, cov, (N,M))
+
+    for i in range(1,N+1):
+        S[i] = S[i-1] * np.exp( (r - 0.5*v[i-1])*dt + np.sqrt(v[i-1] * dt) * Z[i-1,:,0] )
+        v[i] = np.maximum(v[i-1] + kappa*(theta-v[i-1])*dt + sigma*np.sqrt(v[i-1]*dt)*Z[i-1,:,1],0)
+
+    return S, v
+
+
+
 class Heston_SLSQP:
     def __init__(self,S0,r,q,K,T,option_value,opt_paras):
         self.S0 = S0  #标的价格

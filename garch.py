@@ -30,8 +30,8 @@ def Garch_simulation(omega, alpha, beta, N, M, T, S0, r, q):
 def get_param_garch(ticker):
     # Step 1: Fetch historical SPX data (adjust dates as needed)
     ticker = ticker
-    start_date = "2020-01-01"  # ~5 years; increase for more data
-    end_date = "2025-10-27"    # Up to current date
+    start_date = "2024-10-27"
+    end_date = "2025-10-27"
     df = yf.download(ticker, start=start_date, end=end_date)['Close']
 
     # Step 2: Compute log-returns (in decimal; scale to % if preferred)
