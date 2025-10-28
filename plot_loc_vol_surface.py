@@ -7,21 +7,6 @@ def plot_local_vol_surface(calls, local_vol_surface):
     K_grid = np.linspace(calls["strike"].min(), calls["strike"].max(), 60)
     T_grid = np.linspace(calls["ttm"].min(), calls["ttm"].max(), 60)
     KK, TT = np.meshgrid(K_grid, T_grid)
-    # Shared scatter trace for data points (implied vol)
-    scatter = go.Scatter3d(
-        x=calls['strike'],
-        y=calls['ttm'],
-        z=calls['imp_vol'],
-        mode='markers',
-        marker=dict(
-            size=3,
-            color=calls['imp_vol'],
-            colorscale='Viridis',
-            opacity=0.8
-        ),
-        name='Data Points',
-        showlegend=False
-    )
     # Create subplots: 1 row, 2 columns
     fig = make_subplots(
         rows=1, cols=2,
@@ -39,9 +24,7 @@ def plot_local_vol_surface(calls, local_vol_surface):
         showlegend=False
     )
     # Add traces to both subplots
-    fig.add_trace(scatter, row=1, col=1)
     fig.add_trace(surface_trace, row=1, col=1)
-    fig.add_trace(scatter, row=1, col=2)
     fig.add_trace(surface_trace, row=1, col=2)
     # Constrain z-axis only in left subplot
     zmin = float(calls['imp_vol'].min())

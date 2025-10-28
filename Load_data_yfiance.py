@@ -90,8 +90,9 @@ def get_Today_data(Ticker, r):
 
 def save_to_csv(calls,today):
   today = today.strftime('%Y-%m-%d')
-  name = today+".csv"
+  name = "DataSet/"+today+".csv"
   calls.to_csv(name, index=False)
 
 def read_from_csv(name):
+  name = "DataSet/"+name+".csv"
   return pd.read_csv(name)

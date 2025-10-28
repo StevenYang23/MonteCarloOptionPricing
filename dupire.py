@@ -12,12 +12,12 @@ def dupire(K,T,params):
     if d2c_dk2 <= 0 or dc_dt <= 0:
         S,r,impvol_interp = params
         imp = impvol_interp(K,T)
-        if imp > 0 and imp < 0.4:
+        if imp > 0 and imp < 1:
             return imp
         else:
             return 0.1* np.random.uniform(0,1)
     rt = dc_dt/(0.5*K**2*d2c_dk2)
-    if rt > 0 and rt < 0.4:
+    if rt > 0 and rt < 1:
         return rt
     else:
         return 0.1* np.random.uniform(0,1)
