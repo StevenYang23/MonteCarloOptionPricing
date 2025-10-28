@@ -2,13 +2,23 @@ import pandas as pd
 import numpy as np
 from BS_model import implied_vol
 np.random.seed(8309)
-
+import datetime
+import tkinter as tk
+from tkinter import filedialog
 
 def idx_min(data):
     moneyness = np.abs(data["S0"]-data["strike"])
     return data.loc[moneyness.idxmin()]
 
-def get_data(Ticker, r, Today):
+def get_Today_data(Ticker, r):
+  # Get today's date
+  today = datetime.date.today()
+  if today.weekday() == 5:  # Saturday
+      Today = (today - datetime.timedelta(days=1)).isoformat()
+  elif today.weekday() == 6:  # Sunday
+      Today = (today - datetime.timedelta(days=2)).isoformat()
+  else:
+      Today = today.isoformat()
   # Today's underling price (assume lastest)
   hist_1y = Ticker.history(period="1y")
   price = hist_1y['Close']
@@ -76,4 +86,12 @@ def get_data(Ticker, r, Today):
         lambda row: implied_vol(S=row['S0'], K=row['strike'], T=row['ttm'], r=row['r'], option_price=row['lastPrice']), axis=1
     )
   calls = calls.dropna()
-  return calls,option
+  return calls, today
+
+def save_to_csv(calls,today):
+  today = today.strftime('%Y-%m-%d')
+  name = today+".csv"
+  calls.to_csv(name, index=False)
+
+def read_from_csv(name):
+  return pd.read_csv(name)
