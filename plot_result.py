@@ -86,3 +86,43 @@ def plot_payouts(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_
         ax.legend()
     fig.suptitle(bigtitle)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+def plot_payouts_gamma(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts,bigtitle):
+    fig, axs = plt.subplots(2, 2, figsize=(12, 8))
+    axs = axs.ravel()
+    distributions = [
+        (local_vol_payouts, 'Dupire Local Vol Payouts', 'tab:blue', axs[0]),
+        (heston_payouts, 'Heston Model Payouts', 'tab:orange', axs[1]),
+        (Garch_Vol_payouts, 'GARCH Vol Payouts', 'tab:green', axs[2]),
+        (Constant_vol_payouts, 'Constant Vol GBM Payouts', 'tab:red', axs[3])
+    ]
+    for payouts, title, color, ax in distributions:
+        payouts = np.array(payouts)
+        # Use all data for histogram (including zeros)
+        ax.hist(payouts, bins=50, alpha=0.7, color=color, density=True, label="Empirical Hist")
+        
+        # Filter strictly positive payouts for Gamma fit
+        payouts_fit = payouts[payouts > 0]
+        
+        if len(payouts_fit) > 1:
+            # Fit Gamma distribution with loc fixed at 0
+            shape, loc, scale = stats.gamma.fit(payouts_fit, floc=0)
+            xmin = min(payouts_fit)
+            xmax = np.percentile(payouts_fit, 99.5)
+            x = np.linspace(xmin, xmax, 500)
+            pdf_vals = stats.gamma.pdf(x, shape, loc=loc, scale=scale)
+            ax.plot(x, pdf_vals, color='black', lw=2, label="Gamma fit")
+            mu = np.mean(payouts)
+            std = np.std(payouts)
+            ax.set_title(f'{title}\nμ={mu:.2f}, σ={std:.2f}\nGamma: α={shape:.2f}, θ={scale:.2f}')
+        else:
+            mu = np.mean(payouts)
+            std = np.std(payouts)
+            ax.set_title(f'{title}\nμ={mu:.2f}, σ={std:.2f}\nGamma: not enough >0')
+        
+        ax.set_xlabel("Payout")
+        ax.set_ylabel("Density")
+        ax.legend()
+    
+    fig.suptitle(bigtitle)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
