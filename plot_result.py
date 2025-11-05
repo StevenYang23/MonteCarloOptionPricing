@@ -50,7 +50,8 @@ def plot_v_paths(V_path_dupire,V_path_Heston,V_path_Garch,V_path_GBM):
     axs[1, 1].legend()
     plt.tight_layout()
     plt.show()
-def plot_payouts(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts,title):
+
+def plot_payouts(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts,bigtitle):
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
     axs = axs.ravel()
     distributions = [
@@ -83,5 +84,5 @@ def plot_payouts(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_
         ax.set_xlabel("Payout")
         ax.set_ylabel("Density")
         ax.legend()
-    fig.suptitle(title)
+    fig.suptitle(bigtitle)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
