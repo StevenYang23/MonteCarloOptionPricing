@@ -1,47 +1,84 @@
 import numpy as np
-from BS_model import black_scholes_call
+import matplotlib.pyplot as plt
+import pandas as pd
+import scipy.stats as stats
+from scipy.interpolate import CubicSpline
+from scipy.interpolate import interp1d
+import matplotlib as mpl
 np.random.seed(8309)
 
-def C(K,T,params):
-    S,r,impvol_interp = params
-    return black_scholes_call(S, K, T, r, impvol_interp(K,T))
-def dupire(K,T,params):
-    eps = 1e-4
-    dc_dt = (C(K,T+eps,params) - C(K,T,params))/eps
-    d2c_dk2 = (C(K+eps,T,params) - 2*C(K,T,params) + C(K-eps,T,params))/eps**2
-    if d2c_dk2 <= 0 or dc_dt <= 0:
-        S,r,impvol_interp = params
-        imp = impvol_interp(K,T)
-        if imp > 0 and imp < 1:
-            return imp
-        else:
-            return 0.1* np.random.uniform(0,1)
-    rt = dc_dt/(0.5*K**2*d2c_dk2)
-    if rt > 0 and rt < 1:
-        return rt
-    else:
-        return 0.1* np.random.uniform(0,1)
-def get_local_vol_surface(calls,params):
-    K_grid = np.linspace(calls["strike"].min(), calls["strike"].max(), 60)
-    T_grid = np.linspace(calls["ttm"].min(), calls["ttm"].max(), 60)
-    KK, TT = np.meshgrid(K_grid, T_grid)
-    # Make a grid of local volatilities over K and T
-    local_vol_surface = np.zeros_like(KK)
-    for i in range(KK.shape[0]):
-        for j in range(KK.shape[1]):
-            local_vol_surface[i,j] = dupire(KK[i,j],TT[i,j],params)
+def dupire_local_vol(calls,spline):
+    calls_ = calls.copy()
+    calls_ = calls[calls["in_out"]=="out"].copy()  #只用虚值期权来计算局部波动率
+    local_vol_surface = get_local_variance(calls,spline)
     return local_vol_surface
-def get_local_vol_path(params,K,T,N):
-    T_path = np.linspace(0,T,N)
-    V_path = np.zeros_like(T_path)
-    for i in range(T_path.shape[0]):
-        V_path[i] = dupire(K,T_path[i],params)
-    return V_path
+
+def get_spline(calls):  #用来事先计算好期限的样条函数值，后续就不用反复计算了
+    spline = []
+    for m in calls["ttm"].unique():
+        moneyness = calls.loc[calls["ttm"] == m]["y"]
+        sample_volatility = calls.loc[calls["ttm"] == m]["w"]
+        cs_k = CubicSpline(x = moneyness,y = sample_volatility,extrapolate=True)
+        spline.append(cs_k)
+    return spline
+
+def get_total_v(data,spline,y,t):
+    total_v = [float(cs(y)) for cs in spline]
+    f = interp1d(x =data["ttm"].unique(),y = total_v,kind = "linear",fill_value="extrapolate") #平远期插值相当于总方差的线性插值
+    v = float(f(t))
+    return v
+
+# 计算w对t，y的导数
+def diff(data,spline,y,t):
+    yt = get_total_v(data,spline,y,t)
+    y_up = get_total_v(data,spline,y*(1+0.001),t)
+    y_down = get_total_v(data,spline,y*(1-0.001),t)
+    t_up = get_total_v(data,spline,y,t*(1+0.001))
+
+    dw_dt = (t_up - yt)/(t*0.001)
+    dw_dy = (y_up - y_down)/(y*0.001*2)
+    dw_dy2 = (y_up + y_down - 2*yt)/(y*0.001)**2
+    return dw_dt,dw_dy,dw_dy2
+
+def local_v(data,spline,y,t):
+    # w = get_total_v(data,spline,y,t)
+    # dw_dt,dw_dy,dw_dy2 = diff(data,spline,y,t)
+    # numetator = dw_dt
+    # denonimator = 1-y/w*dw_dy + 0.25*(-0.25 - 1/w + y**2/w**2) * (dw_dy**2) + 0.5* dw_dy2
+    # local_variance = numetator / denonimator
+    # if local_variance < 0:  #若存在套利机会，很可能会出现算出的结果为负数，这里简单处理一下
+    #     local_variance  = 1e-8
+    # vol = np.sqrt(local_variance)
+    # return vol
+    return 0.1*np.random.rand()
+
+def get_local_variance(data,spline):
+    t_array = np.linspace(data["ttm"].min(),data["ttm"].max(),60)
+    y_array = np.linspace(data["y"].min(),data["y"].max(),60)   
+    t, y = np.meshgrid(t_array,y_array) 
+    v = np.zeros_like(y)
+
+    # 循环确定每个点的隐含波动率，上一步已经存储了k维度上的样条函数，循环的时候还需要t维度的样条插值，这样可以计算任意点的隐含波动率值
+    for t_idx,t1 in enumerate(t_array):
+        for y_idx,y1 in enumerate(y_array):
+            v[y_idx,t_idx] = local_v(data,spline,y1,t1)
+    return v
+
+def get_local_vol_path(calls, spline, K, T, N):
+    S0 = calls["S0"].iloc[0]
+    r = calls["r"].iloc[0]
+    t_array = np.linspace(0, T, N)
+    local_vol_path = np.zeros(N)
+    for i in range(N):
+        ttm = T - t_array[i]
+        y = np.log(S0/K)
+        local_vol_path[i] = local_v(data=calls, spline=spline, y=y, t=ttm)
+    return local_vol_path
 
 
-def dupire_simulation(mu_annual, K, S0, T, N, M, params):
+def dupire_simulation(mu_annual, K, S0, T, N, M, calls, spline):
     np.random.seed(8309)  # For reproducibility
-    V_path = get_local_vol_path(params, K, T, N)  # Assumed shape: (N,)
+    V_path = get_local_vol_path(calls, spline, K, T, N)  # Assumed shape: (N,)
     dt = T / N
     t = np.linspace(0, T, N + 1)
     

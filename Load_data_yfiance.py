@@ -38,9 +38,9 @@ def get_Today_data(Ticker, r):
     chain = Ticker.option_chain(exp)
     # Extract call and put options separately, add appropriate columns, and merge into a single DataFrame
     calls = chain.calls[['strike', 'lastPrice', 'lastTradeDate']].copy()
-    calls['CP'] = 0
+    calls['CP'] = 0 # 0 for call options
     puts = chain.puts[['strike', 'lastPrice', 'lastTradeDate']].copy()
-    puts['CP'] = 1
+    puts['CP'] = 1 # 1 for put options
     option = pd.concat([calls, puts], ignore_index=True)
     # if strike is too far from ann_mean, delete the option
     lower_bound = mean - 2.5 * std
@@ -50,7 +50,6 @@ def get_Today_data(Ticker, r):
     option = option.dropna()
     # Only Today
     option['lastTradeDate'] = pd.to_datetime(option['lastTradeDate'])
-    option = option[option['lastTradeDate'].dt.date == pd.to_datetime(Today).date()].copy()
     option['exp'] = exp
     option['S0'] = underly
     # Calculate TTM
@@ -86,6 +85,9 @@ def get_Today_data(Ticker, r):
         lambda row: implied_vol(S=row['S0'], K=row['strike'], T=row['ttm'], r=row['r'], option_price=row['lastPrice']), axis=1
     )
   calls = calls.dropna()
+  calls["w"] = calls["imp_vol"]**2 * calls["ttm"]  #计算总方差
+  calls["y"] = np.log(calls["strike"]/calls["F"])  #计算远期在值程度
+  calls = calls.sort_values(["exp_month","y"])
   return calls, today
 
 def save_to_csv(calls,today):
