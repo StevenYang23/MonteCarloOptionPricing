@@ -4,6 +4,9 @@ import numpy as np
 import scipy.stats as stats
 from scipy.stats import norm
 def plot_s_paths(S_path_dupire,S_path_Heston,S_path_Garch,S_path_GBM,m=50):
+    """
+    Compare simulated asset paths from different stochastic volatility models.
+    """
     fig, axs = plt.subplots(4, 1, figsize=(10, 8))
     axs[0].plot(S_path_dupire[:,:m])
     axs[0].set_title("Dupire Local Vol Simulated Paths")
@@ -28,19 +31,22 @@ def plot_s_paths(S_path_dupire,S_path_Heston,S_path_Garch,S_path_GBM,m=50):
     plt.tight_layout()
     plt.show()
 def plot_v_paths(V_path_dupire,V_path_Heston,V_path_Garch,V_path_GBM):
+    """
+    Plot the evolution of volatility or variance across simulation frameworks.
+    """
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
     axs[0, 0].plot(V_path_dupire, label="Dupire Local Vol")
     axs[0, 0].set_title("Dupire Local Vol")
     axs[0, 0].set_xlabel("Time Step")
     axs[0, 0].set_ylabel("Volatility or Variance")
     axs[0, 0].legend()
-    axs[0, 1].plot(np.mean(V_path_Heston, axis=1), label="Heston Vol (Avg)")
-    axs[0, 1].set_title("Heston Vol (Avg)")
+    axs[0, 1].plot(V_path_Heston, label="Heston Vol")
+    axs[0, 1].set_title("Heston Vol (A Random Path)")
     axs[0, 1].set_xlabel("Time Step")
     axs[0, 1].set_ylabel("Volatility or Variance")
     axs[0, 1].legend()
-    axs[1, 0].plot(np.mean(V_path_Garch, axis=1), label="GARCH Vol (Avg)")
-    axs[1, 0].set_title("GARCH Vol (Avg)")
+    axs[1, 0].plot(V_path_Garch, label="GARCH Vol")
+    axs[1, 0].set_title("GARCH Vol (A Random Path)")
     axs[1, 0].set_xlabel("Time Step")
     axs[1, 0].set_ylabel("Volatility or Variance")
     axs[1, 0].legend()
@@ -52,7 +58,10 @@ def plot_v_paths(V_path_dupire,V_path_Heston,V_path_Garch,V_path_GBM):
     plt.tight_layout()
     plt.show()
 
-def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts, bigtitle, dist=True):
+def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts, bigtitle, dist=True, K=None):
+    """
+    Visualize payout distributions and optional log-normal fits.
+    """
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
     axs = axs.ravel()
     distributions = [
@@ -83,6 +92,11 @@ def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant
         else:
             # Only show mean and std; no lognorm info
             ax.set_title(f'{title}\nμ={mu:.2f}, σ={std:.2f}')
+
+        # Add vertical line at K if provided
+        if K is not None:
+            ax.axvline(K, color='gray', linestyle='--', linewidth=1.5, label=f'Strike K={K}')
+
         ax.set_xlabel("Payout")
         ax.set_ylabel("Density")
         ax.legend()
@@ -91,6 +105,9 @@ def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 def plot_CI(local_vol_val,heston_val,Garch_Vol_val,Constant_vol_val,alpha = 0.05):
+    """
+    Display confidence intervals for option valuations under multiple models.
+    """
     mean_local = np.mean(local_vol_val)
     mean_heston = np.mean(heston_val)
     mean_garch = np.mean(Garch_Vol_val)
@@ -132,6 +149,9 @@ def plot_CI(local_vol_val,heston_val,Garch_Vol_val,Constant_vol_val,alpha = 0.05
     plt.show()
 
 def plot_sharkfin(B,K):
+    """
+    Plot the shark fin payoff profile as a function of terminal price.
+    """
     # Define S_T range for payoff plot
     S_T = np.linspace(0, B * 1.1, 500)  # go slightly beyond B
     # Sharkfin payoff (simplified static version: assumes knock-out iff S_T >= B)
@@ -157,9 +177,15 @@ def plot_sharkfin(B,K):
     plt.tight_layout()
     plt.show()
 def DCF(payout,r,T):
+    """
+    Discount a payoff from maturity back to present value.
+    """
     return payout*np.exp(-r*T)
 
 def valuation(path,K,B,r,AMR=True):
+    """
+    Value a shark fin option by applying the knock-out barrier to simulated paths.
+    """
     ST = path[-1, :]   
     T = path.shape[0]/252
     max_path = ST

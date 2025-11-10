@@ -5,26 +5,57 @@ import plotly.graph_objects as go
 
 def payoff_shark_fin_call(S_array, K, B):
     """
-    单步近似：
-    若最终价 S_T >= B，则认为障碍被触及 => Payoff = 0
-    否则 Payoff = max(S_T - K, 0)
+    Single-step approximation of a shark fin call option payoff.
+
+    If the terminal price ``S_T`` exceeds the barrier ``B``, the payoff is zero.
+    Otherwise the payoff equals ``max(S_T - K, 0)``.
     """
     return np.where(S_array >= B, 0.0, np.maximum(S_array - K, 0.0))
 
 
 
-def compute_mc_greeks_on_grid(payoff_func, S_vals, T_vals,
-                            n_sim, r, sigma, K, B,
-                            h, vol_h):
+def compute_mc_greeks_on_grid(
+    payoff_func,
+    S_vals,
+    T_vals,
+    n_sim,
+    r,
+    sigma,
+    K,
+    B,
+    h,
+    vol_h,
+):
     """
-    :param payoff_func:   给定S终值时的Payoff函数, 例如 payoff_shark_fin_call
-    :param S_vals:        现货价格网格
-    :param T_vals:        到期时间网格
-    :param n_sim:         每个网格点的蒙特卡洛模拟次数
-    :param r, sigma, K, B 等期权参数
-    :param h:             现货方向有限差分步长
-    :param vol_h:         波动率方向有限差分步长
-    :return: (delta_grid, gamma_grid, vega_grid)
+    Estimate Delta, Gamma, and Vega on a grid using Monte Carlo finite differences.
+
+    Parameters
+    ----------
+    payoff_func : callable
+        Payoff function mapping terminal spot values to payoffs.
+    S_vals : array-like
+        Grid of spot prices used for finite-difference evaluation.
+    T_vals : array-like
+        Grid of option maturities.
+    n_sim : int
+        Number of Monte Carlo samples per grid point.
+    r : float
+        Risk-free rate.
+    sigma : float
+        Base volatility level for simulations.
+    K : float
+        Strike price.
+    B : float
+        Barrier level for the shark fin structure.
+    h : float
+        Finite-difference step in the spot dimension.
+    vol_h : float
+        Finite-difference step in the volatility dimension.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray, np.ndarray]
+        Arrays containing Delta, Gamma, and Vega values over the grid.
     """
     n_T = len(T_vals)
     n_S = len(S_vals)
@@ -34,13 +65,13 @@ def compute_mc_greeks_on_grid(payoff_func, S_vals, T_vals,
 
     for i, T in enumerate(T_vals):
         sqrt_T = np.sqrt(T)
-        # 对每个 T，重新生成随机数或使用相同随机数均可，这里为了稳定性而每次重采样
+        # Resample noise for each maturity to maintain independence
         for j, S in enumerate(S_vals):
-            # ========== Delta & Gamma ========== 
-            # 生成 n_sim 个标准正态随机数
+            # ========== Delta & Gamma ==========
+            # Draw n_sim standard normal shocks
             Z = np.random.standard_normal(n_sim)
 
-            # 在单步模型下，模拟终值:
+            # Simulate terminal prices in a single-step model
             # 1) S + h
             S_plus = (S + h) * np.exp((r - 0.5 * sigma**2) * T + sigma * sqrt_T * Z)
             # 2) S
@@ -48,12 +79,12 @@ def compute_mc_greeks_on_grid(payoff_func, S_vals, T_vals,
             # 3) S - h
             S_minus = (S - h) * np.exp((r - 0.5 * sigma**2) * T + sigma * sqrt_T * Z)
 
-            # 计算贴现期权价值(取平均后再折现)
+            # Discount the average payoff
             V_plus   = np.mean(payoff_func(S_plus,   K, B))   * np.exp(-r * T)
             V_center = np.mean(payoff_func(S_center, K, B))   * np.exp(-r * T)
             V_minus  = np.mean(payoff_func(S_minus,  K, B))   * np.exp(-r * T)
             
-            # 利用中央差分求 Delta & Gamma
+            # Central finite differences for Delta & Gamma
             delta = (V_plus - V_minus) / (2 * h)
             gamma = (V_plus - 2 * V_center + V_minus) / (h ** 2)
             
@@ -61,7 +92,7 @@ def compute_mc_greeks_on_grid(payoff_func, S_vals, T_vals,
             gamma_grid[i, j] = gamma
 
             # ========== Vega ==========
-            # 对波动率做 ±vol_h 扰动，Spot不变
+            # Perturb volatility by ±vol_h with spot held constant
             Z_vol = np.random.standard_normal(n_sim)
             # sigma + vol_h
             S_sigma_plus = S * np.exp((r - 0.5 * (sigma + vol_h)**2) * T
@@ -134,24 +165,35 @@ def plot_greek_surfaces_3d(delta, gamma, vega, S_grid, T_grid):
 
     fig.show()
 
-def plot_greeks(r,sigma,K,B,S0,h=1,vol_h=0.005,n_sim=100000):
+def plot_greeks(r, sigma, K, B, S0, h=1, vol_h=0.005, n_sim=100000):
     """
-    计算并绘制看涨鲨鱼鳍期权在(S, T)网格上的希腊值 (Delta, Gamma, Vega)
-    :param r:         无风险利率
-    :param sig:       波动率
-    :param K:         行权价
-    :param B:         鲨鱼鳍障碍价
-    :param S0:        当前现货价格
-    :param h:         现货方向有限差分步长
-    :param vol_h:     波动率方向有限差分步长
-    :param n_sim:     每个网格点的蒙特卡洛模拟路径数
+    Compute and visualize Delta, Gamma, and Vega for a shark fin call option.
+
+    Parameters
+    ----------
+    r : float
+        Risk-free interest rate.
+    sigma : float
+        Base volatility used in the simulations.
+    K : float
+        Strike price of the option.
+    B : float
+        Barrier level of the shark fin structure.
+    S0 : float
+        Current spot price.
+    h : float, optional
+        Finite-difference step size in the spot dimension, default 1.
+    vol_h : float, optional
+        Finite-difference step size in the volatility dimension, default 0.005.
+    n_sim : int, optional
+        Number of Monte Carlo paths per grid point, default 100000.
     """
     np.random.seed(8309)
 
     n_S = 1000
     n_T = 100
-    S_vals = np.linspace(S0 * 0.4, S0 * 1.6, n_S)   # [40, 160]
-    T_vals = np.linspace(0.1, 2.0, n_T)            # [0.1, 2.0] 年
+    S_vals = np.linspace(S0 * 0.4, S0 * 1.6, n_S)   # Spot grid
+    T_vals = np.linspace(0.1, 2.0, n_T)            # Maturity grid in years
 
     delta_grid, gamma_grid, vega_grid = compute_mc_greeks_on_grid(
         payoff_shark_fin_call,
@@ -160,6 +202,6 @@ def plot_greeks(r,sigma,K,B,S0,h=1,vol_h=0.005,n_sim=100000):
         h, vol_h
     )
 
-    # 方便后续 3D 作图
+    # Prepare grids for 3D plotting
     S_grid, T_grid = np.meshgrid(S_vals, T_vals)   
     plot_greek_surfaces_3d(delta=delta_grid, gamma=gamma_grid, vega=vega_grid, S_grid=S_grid, T_grid=T_grid)

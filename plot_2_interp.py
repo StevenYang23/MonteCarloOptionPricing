@@ -3,6 +3,18 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 def plot_two_interp(interp, regres, calls):
+    """
+    Visualize implied volatility surfaces from spline and regression interpolators.
+
+    Parameters
+    ----------
+    interp : callable
+        Interpolant returning implied volatility for strike and maturity grids.
+    regres : callable
+        Polynomial regression model for implied volatility.
+    calls : pandas.DataFrame
+        Option dataset containing strike, time-to-maturity, and implied volatility.
+    """
     # Create shared grid
     strike_range = np.linspace(calls['strike'].min(), calls['strike'].max(), 60)
     ttm_range = np.linspace(calls['ttm'].min(), calls['ttm'].max(), 60)

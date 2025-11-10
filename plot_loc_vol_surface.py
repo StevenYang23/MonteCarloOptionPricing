@@ -2,6 +2,9 @@ import numpy as np
 import plotly.graph_objects as go
 
 def plot_local_vol_surface(calls, local_vol_surface):
+    """
+    Render a Dupire local volatility surface over moneyness and maturity.
+    """
     # Grid for local vol surface (must match the shape of local_vol_surface)
     K_grid = np.linspace(calls["y"].min(), calls["y"].max(), local_vol_surface.shape[1])
     T_grid = np.linspace(calls["ttm"].min(), calls["ttm"].max(), local_vol_surface.shape[0])

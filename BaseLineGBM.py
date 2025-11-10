@@ -1,6 +1,30 @@
 import numpy as np
 
 def GBM_simulation(vol_annual, mu_annual, S0, T, N, M):
+    """
+    Simulate geometric Brownian motion price paths and corresponding volatility.
+
+    Parameters
+    ----------
+    vol_annual : float
+        Annualized volatility of the underlying asset.
+    mu_annual : float
+        Annualized drift of the underlying asset.
+    S0 : float
+        Initial asset price.
+    T : float
+        Time horizon of the simulation in years.
+    N : int
+        Number of time steps in the simulation.
+    M : int
+        Number of Monte Carlo paths to simulate.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        Matrix of simulated asset paths with shape ``(N + 1, M)`` and
+        an array containing the (constant) volatility path.
+    """
     np.random.seed(8309)
     dt = T / N
     t = np.linspace(0, T, N + 1)

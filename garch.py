@@ -6,6 +6,32 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def Garch_simulation(omega, alpha, beta, mu_annual, vol_annual, N, M, T, S0):
+    """
+    Simulate asset paths using a GARCH(1,1) volatility process.
+
+    Parameters
+    ----------
+    omega, alpha, beta : float
+        GARCH(1,1) parameters governing the variance dynamics.
+    mu_annual : float
+        Annualized drift of the underlying asset.
+    vol_annual : float
+        Annualized volatility used to initialize the variance path.
+    N : int
+        Number of discrete time steps.
+    M : int
+        Number of Monte Carlo paths.
+    T : float
+        Simulation horizon in years.
+    S0 : float
+        Initial asset price.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        Simulated price paths and conditional variances with shapes
+        ``(N + 1, M)`` and ``(N + 1, M)`` respectively.
+    """
     np.random.seed(8309)
     dt = T / N  # Time increment per step
     noise = np.zeros((M, N + 1))
@@ -24,7 +50,19 @@ def Garch_simulation(omega, alpha, beta, mu_annual, vol_annual, N, M, T, S0):
     return paths.T, sigt.T  # Transposed for (time, paths) and (time, M) shapes
 
 def get_param_garch(ticker):
-    # Step 1: Fetch historical SPX data (adjust dates as needed)
+    """
+    Estimate GARCH(1,1) parameters from historical data downloaded via yfinance.
+
+    Parameters
+    ----------
+    ticker : str
+        Symbol for the asset to calibrate.
+
+    Returns
+    -------
+    numpy.ndarray
+        Array containing ``[omega, alpha, beta]`` estimates.
+    """
     ticker = ticker
     start_date = "2025-9-27"
     end_date = "2025-10-27"
@@ -36,6 +74,9 @@ def get_param_garch(ticker):
 
     # Step 3: GARCH(1,1) negative log-likelihood function
     def garch_loglik(params, returns):
+        """
+        Compute the negative log-likelihood for a GARCH(1,1) process.
+        """
         omega, alpha, beta = params
         n = len(returns)
         sigma2 = np.zeros(n)
