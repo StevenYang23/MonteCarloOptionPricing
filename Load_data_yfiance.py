@@ -85,8 +85,8 @@ def get_Today_data(Ticker, r):
     all_options = []
     for exp in exp_list:
         # Skip expiry dates with zero time to maturity
-        if exp == Today:
-            continue
+        # if exp == Today:
+        #     continue
         if (pd.to_datetime(exp) - pd.to_datetime(Today)).days >= 365:
             break
         chain = Ticker.option_chain(exp)
@@ -107,7 +107,10 @@ def get_Today_data(Ticker, r):
         option['exp'] = exp
         option['S0'] = underly
         # Calculate time-to-maturity in trading years
-        option['ttm'] = ((pd.to_datetime(option['exp']) - pd.to_datetime(Today)).dt.days)/252
+        option['lastTradeDate'] = pd.to_datetime(option['lastTradeDate']).dt.tz_localize(None)
+        # cast to object dtype explicitly:
+        option['lastTradeDate'] = option['lastTradeDate'].astype(object)
+        option['ttm'] = (pd.to_datetime(exp) - pd.to_datetime(option['lastTradeDate'])).dt.days / 252
         option["exp_month"] = pd.to_datetime(option['exp']).dt.strftime('%y%m')
         option["r"] = r
         option["in_out"] = np.where(
@@ -145,10 +148,10 @@ def get_Today_data(Ticker, r):
     calls['imp_vol'] = calls.apply(
         lambda row: implied_vol(S=row['S0'], K=row['strike'], T=row['ttm'], r=row['r'], option_price=row['lastPrice']), axis=1
     )
-    calls = calls.dropna()
     calls["w"] = calls["imp_vol"]**2 * calls["ttm"]  # Total variance
     calls["y"] = np.log(calls["strike"]/calls["F"])  # Forward moneyness
-    calls = calls.sort_values(["exp_month","y"])
+    calls = calls.dropna()
+    calls = calls.sort_values(["ttm","y"])
     return calls, today
 
 def save_to_csv(calls, today):

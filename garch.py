@@ -64,9 +64,8 @@ def get_param_garch(ticker):
         Array containing ``[omega, alpha, beta]`` estimates.
     """
     ticker = ticker
-    start_date = "2025-9-27"
-    end_date = "2025-10-27"
-    df = yf.download(ticker, start=start_date, end=end_date)['Close']
+    start_date = "2025-10-01"
+    df = yf.download(ticker, start=start_date)['Close']
 
     # Step 2: Compute log-returns (in decimal; scale to % if preferred)
     returns = np.log(df / df.shift(1)).dropna().values

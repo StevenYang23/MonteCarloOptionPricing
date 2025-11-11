@@ -104,47 +104,81 @@ def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant
     fig.suptitle(bigtitle)
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-def plot_CI(local_vol_val,heston_val,Garch_Vol_val,Constant_vol_val,alpha = 0.05):
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import norm
+
+def plot_CI(local_vol_val, heston_val, Garch_Vol_val, Constant_vol_val, alpha=0.05):
     """
-    Display confidence intervals for option valuations under multiple models.
+    Display confidence intervals for option valuations under multiple models,
+    with labels auto-placed on the side opposite to the CI location.
     """
-    mean_local = np.mean(local_vol_val)
-    mean_heston = np.mean(heston_val)
-    mean_garch = np.mean(Garch_Vol_val)
-    mean_constant = np.mean(Constant_vol_val)
-    n = local_vol_val.shape[0]
-    std_err_local = np.std(local_vol_val, ddof=1) / np.sqrt(n)
-    std_err_heston = np.std(heston_val, ddof=1) / np.sqrt(n)
-    std_err_garch = np.std(Garch_Vol_val, ddof=1) / np.sqrt(n)
-    std_err_constant = np.std(Constant_vol_val, ddof=1) / np.sqrt(n)
-    z = norm.ppf(1-alpha/2)
-    ci_local = (mean_local - z * std_err_local, mean_local + z * std_err_local)
-    ci_heston = (mean_heston - z * std_err_heston, mean_heston + z * std_err_heston)
-    ci_garch = (mean_garch - z * std_err_garch, mean_garch + z * std_err_garch)
-    ci_constant = (mean_constant - z * std_err_constant, mean_constant + z * std_err_constant)
-    means = [mean_local, mean_heston, mean_garch, mean_constant]
-    cis = [ci_local, ci_heston, ci_garch, ci_constant]
-    stds = [std_err_local, std_err_heston, std_err_garch, std_err_constant]
-    labels_with_stats = [
-        f'Local Vol (\u03BC={mean_local:.4f}, \u03C3={std_err_local:.4f})',
-        f'Heston (\u03BC={mean_heston:.4f}, \u03C3={std_err_heston:.4f})',
-        f'GARCH (\u03BC={mean_garch:.4f}, \u03C3={std_err_garch:.4f})',
-        f'Const. Vol (\u03BC={mean_constant:.4f}, \u03C3={std_err_constant:.4f})'
-    ]
+    # Compute stats
+    vals = [local_vol_val, heston_val, Garch_Vol_val, Constant_vol_val]
     labels = ['Local Vol', 'Heston', 'GARCH', 'Const. Vol']
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
+
+    means = []
+    cis = []
+    std_errs = []
+    for v in vals:
+        n = len(v)
+        mean = np.mean(v)
+        std_err = np.std(v, ddof=1) / np.sqrt(n)
+        z = norm.ppf(1 - alpha / 2)
+        ci = (mean - z * std_err, mean + z * std_err)
+        means.append(mean)
+        cis.append(ci)
+        std_errs.append(std_err)
+
+    # Labels with stats (for legend)
+    labels_with_stats = [
+        f'{lab} (μ={m:.4f}, σ={s:.4f})'
+        for lab, m, s in zip(labels, means, std_errs)
+    ]
+
+    # Determine global x-range for smart placement
+    all_x = [ci[0] for ci in cis] + [ci[1] for ci in cis] + means
+    x_min, x_max = min(all_x), max(all_x)
+    x_range = x_max - x_min
+    margin = 0.05 * x_range  # 5% margin
+    plot_x_min, plot_x_max = x_min - margin, x_max + margin
+
     fig, ax = plt.subplots(figsize=(10, 5))
+
     for i, (mean, ci, label, color) in enumerate(zip(means, cis, labels, colors)):
-        ax.hlines(y=i, xmin=ci[0], xmax=ci[1], color=color, linewidth=4, label=label)
-        ax.plot(mean, i, 'o', color=color, markersize=10)
+        # Draw CI line
+        ax.hlines(y=i, xmin=ci[0], xmax=ci[1], color=color, linewidth=4)
+        # Draw mean marker
+        ax.plot(mean, i, 'o', color=color, markersize=8, zorder=5)
+
+        # 🎯 Smart label placement:
+        # If mean is in left 40% → label on right; else on left
+        if mean < x_min + 0.4 * x_range:
+            ha = 'left'
+            x_label = ci[1] + 0.02 * x_range  # just right of CI
+        else:
+            ha = 'right'
+            x_label = ci[0] - 0.02 * x_range  # just left of CI
+
+        # Place label with background for readability
+        ax.text(
+            x_label, i,
+            labels_with_stats[i],
+            va='center',
+            ha=ha,
+            fontsize=9,
+            bbox=dict(boxstyle="round,pad=0.2", facecolor="white", edgecolor="lightgray", alpha=0.8),
+            zorder=10
+        )
+
     ax.set_yticks(range(len(labels)))
     ax.set_yticklabels(labels)
+    ax.set_xlim(plot_x_min, plot_x_max)
     ax.set_xlabel('Mean Discounted Option Value')
-    ax.set_title('95% Confidence Intervals for Each Model')
+    ax.set_title(f'{int((1-alpha)*100)}% Confidence Intervals for Each Model')
     ax.grid(axis='x', linestyle='--', alpha=0.7)
-    # Add legend with mean and STD next to names, in lower right
-    handles, _ = ax.get_legend_handles_labels()
-    ax.legend(handles, labels_with_stats, loc='lower right')
+
     plt.tight_layout()
     plt.show()
 
@@ -185,6 +219,7 @@ def DCF(payout,r,T):
 def valuation(path,K,B,r,AMR=True):
     """
     Value a shark fin option by applying the knock-out barrier to simulated paths.
+    AMR: if American style
     """
     ST = path[-1, :]   
     T = path.shape[0]/252

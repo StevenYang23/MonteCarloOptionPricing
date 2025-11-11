@@ -7,7 +7,7 @@ from scipy.interpolate import interp1d
 import matplotlib as mpl
 np.random.seed(8309)
 
-def dupire_local_vol(calls, spline):
+def dupire_local_vol(calls, spline, n_t, n_y):
     """
     Compute Dupire local volatility on a grid using precomputed spline objects.
 
@@ -26,7 +26,7 @@ def dupire_local_vol(calls, spline):
     """
     calls_ = calls.copy()
     calls_ = calls[calls["in_out"] == "out"].copy()  # Use only out-of-the-money options
-    local_vol_surface = get_local_variance(calls, spline)
+    local_vol_surface = get_local_variance(calls, spline, n_t, n_y)
     return local_vol_surface
 
 def get_spline(calls):
@@ -43,10 +43,20 @@ def get_spline(calls):
     list
         List of `scipy.interpolate.CubicSpline` objects indexed by maturity.
     """
+    # sort by ttm and strike to ensure proper ordering for spline construction 
+    calls = calls.sort_values(["ttm","y"])
     spline = []
     for m in calls["ttm"].unique():
-        moneyness = calls.loc[calls["ttm"] == m]["y"]
-        sample_volatility = calls.loc[calls["ttm"] == m]["w"]
+        subset = calls.loc[calls["ttm"] == m, ["y", "w"]].dropna()
+        # Keep only the first occurrence for each unique 'y' (you can use 'last' or custom logic too)
+        unique_pairs = subset.drop_duplicates(subset=["y"], keep="first").sort_values("y")
+        moneyness = unique_pairs["y"].values
+        if len(moneyness) < 2:
+            spline.append(cs_k)
+            continue
+        sample_volatility = unique_pairs["w"].values
+        # moneyness = calls.loc[calls["ttm"] == m]["y"]
+        # sample_volatility = calls.loc[calls["ttm"] == m]["w"]
         cs_k = CubicSpline(x=moneyness, y=sample_volatility, extrapolate=True)
         spline.append(cs_k)
     return spline
@@ -116,12 +126,12 @@ def local_v(data, spline, y, t):
     return vol
     # return 0.1*np.random.rand()
 
-def get_local_variance(data, spline):
+def get_local_variance(data, spline,n_t,n_y):
     """
     Generate a grid of local variance values over log-moneyness and maturity.
     """
-    t_array = np.linspace(data["ttm"].min(),data["ttm"].max(),60)
-    y_array = np.linspace(data["y"].min(),data["y"].max(),60)
+    t_array = np.linspace(data["ttm"].min(),data["ttm"].max(),n_t)
+    y_array = np.linspace(data["y"].min(),data["y"].max(),n_y)
     t, y = np.meshgrid(t_array,y_array)
     v = np.zeros_like(y)
 
@@ -130,23 +140,61 @@ def get_local_variance(data, spline):
         for y_idx, y1 in enumerate(y_array):
             v[y_idx, t_idx] = local_v(data, spline, y1, t1)
     return v
+    
+def get_local_vol_path(calls, spline, y, T, N, n_t):
+    """
+    Sample the local volatility term structure along a single (y, T) path.
+    
+    Parameters:
+    -----------
+    calls : pd.DataFrame
+        Option data (used by `local_v`; may be unused if `spline` is sufficient)
+    spline : list of CubicSpline (or callable)
+        Precomputed volatility interpolants per maturity
+    y : float
+        Moneyness (e.g., log(K/F) or K/S0) for the path
+    T : float
+        Total maturity (in years)
+    N : int
+        Number of time steps in the *output* local_vol_path (e.g., for SDE simulation)
+    n_t : int
+        Number of points for *intermediate* sampling (higher → smoother interpolation)
+    
+    Returns:
+    --------
+    local_vol_path : np.ndarray of shape (N,)
+        Local volatility values at times t_i = i * T / (N-1), i=0,...,N-1
+    """
+    t_fine = np.linspace(0, T, n_t)
+    v = np.empty(n_t)
+    
+    for i, t in enumerate(t_fine):
+        t = max(t, 1e-8)
+        val = local_v(data=calls, spline=spline, y=y, t=t)
+        v[i] = val if np.isfinite(val) else np.nan
 
-def get_local_vol_path(calls, spline, K, T, N):
-    """
-    Sample the local volatility term structure along a single option path.
-    """
-    S0 = calls["S0"].iloc[0]
-    r = calls["r"].iloc[0]
-    t_array = np.linspace(0, T, N)
-    local_vol_path = np.zeros(N)
-    for i in range(N):
-        ttm = T - t_array[i]
-        y = np.log(S0/K)
-        local_vol_path[i] = local_v(data=calls, spline=spline, y=y, t=ttm)
+    v_series = pd.Series(v, index=t_fine)
+    v_clean = (
+        v_series
+        .interpolate(method='linear')   # linear fill internal gaps
+        .fillna(method='ffill')         # forward fill start
+        .fillna(method='bfill')         # backward fill end
+    )
+    
+    # Fallback if all NaN
+    if v_clean.isna().all():
+        fallback = np.nanmean(calls['imp_vol'])
+        fallback = fallback if np.isfinite(fallback) else 0.2  # 20% vol default
+        v_clean = pd.Series(np.full(n_t, fallback), index=t_fine)
+
+    v_clean = v_clean.values
+
+    t_out = np.linspace(0, T, N)
+    local_vol_path = np.interp(t_out, t_fine, v_clean)
+
     return local_vol_path
 
-
-def dupire_simulation(mu_annual, K, S0, T, N, M, calls, spline):
+def dupire_simulation(mu_annual, y, S0, T, N, M, calls, spline, n_t):
     """
     Simulate price paths under the Dupire local volatility framework.
 
@@ -168,6 +216,8 @@ def dupire_simulation(mu_annual, K, S0, T, N, M, calls, spline):
         Dataset containing market option information.
     spline : list
         Spline interpolants generated by ``get_spline``.
+    N_t : int
+        Number of time steps for local volatility grid.
 
     Returns
     -------
@@ -176,7 +226,7 @@ def dupire_simulation(mu_annual, K, S0, T, N, M, calls, spline):
         volatility path used in the simulation.
     """
     np.random.seed(8309)  # For reproducibility
-    V_path = get_local_vol_path(calls, spline, K, T, N)  # Assumed shape: (N,)
+    V_path = get_local_vol_path(calls, spline, y, T, N, n_t)  # Assumed shape: (N,)
     dt = T / N
     t = np.linspace(0, T, N + 1)
     

@@ -28,7 +28,7 @@ def plot_local_vol_surface(calls, local_vol_surface):
             xaxis_title='Moneyness',
             yaxis_title='Time to Maturity (years)',
             zaxis_title='Volatility',
-            zaxis=dict(range=[0, 1.3]),
+            # zaxis=dict(range=[0, 1]),
             aspectratio=dict(x=1, y=0.8, z=0.6)
         ),
         height=600,
