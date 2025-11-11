@@ -6,6 +6,14 @@ from scipy.stats import norm
 def plot_s_paths(S_path_dupire,S_path_Heston,S_path_Garch,S_path_GBM,m=50):
     """
     Compare simulated asset paths from different stochastic volatility models.
+
+    Parameters
+    ----------
+    S_path_dupire, S_path_Heston, S_path_Garch, S_path_GBM : numpy.ndarray
+        Arrays of shape ``(N + 1, M)`` containing simulated asset prices for
+        each framework.
+    m : int, optional
+        Number of paths to display from each simulation, default 50.
     """
     fig, axs = plt.subplots(4, 1, figsize=(10, 8))
     axs[0].plot(S_path_dupire[:,:m])
@@ -33,6 +41,12 @@ def plot_s_paths(S_path_dupire,S_path_Heston,S_path_Garch,S_path_GBM,m=50):
 def plot_v_paths(V_path_dupire,V_path_Heston,V_path_Garch,V_path_GBM):
     """
     Plot the evolution of volatility or variance across simulation frameworks.
+
+    Parameters
+    ----------
+    V_path_dupire, V_path_Heston, V_path_Garch, V_path_GBM : numpy.ndarray
+        Arrays capturing the volatility or variance paths generated under each
+        model. Shapes may differ depending on the simulation framework.
     """
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
     axs[0, 0].plot(V_path_dupire, label="Dupire Local Vol")
@@ -60,7 +74,19 @@ def plot_v_paths(V_path_dupire,V_path_Heston,V_path_Garch,V_path_GBM):
 
 def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts, bigtitle, dist=True, K=None):
     """
-    Visualize payout distributions and optional log-normal fits.
+    Visualize payout distributions and optionally overlay log-normal fits.
+
+    Parameters
+    ----------
+    local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts : array-like
+        Discounted payout samples generated from the respective models.
+    bigtitle : str
+        Title applied to the full figure.
+    dist : bool, optional
+        If ``True``, attempt to fit and overlay a log-normal distribution on
+        positive payout observations, default ``True``.
+    K : float, optional
+        Strike level to mark with a vertical reference line, if provided.
     """
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
     axs = axs.ravel()
@@ -110,8 +136,15 @@ from scipy.stats import norm
 
 def plot_CI(local_vol_val, heston_val, Garch_Vol_val, Constant_vol_val, alpha=0.05):
     """
-    Display confidence intervals for option valuations under multiple models,
-    with labels auto-placed on the side opposite to the CI location.
+    Display confidence intervals for option valuations under multiple models.
+
+    Parameters
+    ----------
+    local_vol_val, heston_val, Garch_Vol_val, Constant_vol_val : array-like
+        Collections of discounted option values produced by each model.
+    alpha : float, optional
+        Significance level used when computing two-sided confidence intervals,
+        default ``0.05`` for 95% CIs.
     """
     # Compute stats
     vals = [local_vol_val, heston_val, Garch_Vol_val, Constant_vol_val]
@@ -185,6 +218,13 @@ def plot_CI(local_vol_val, heston_val, Garch_Vol_val, Constant_vol_val, alpha=0.
 def plot_sharkfin(B,K):
     """
     Plot the shark fin payoff profile as a function of terminal price.
+
+    Parameters
+    ----------
+    B : float
+        Barrier level at which the option knocks out.
+    K : float
+        Strike price of the call payoff.
     """
     # Define S_T range for payoff plot
     S_T = np.linspace(0, B * 1.1, 500)  # go slightly beyond B
@@ -213,13 +253,40 @@ def plot_sharkfin(B,K):
 def DCF(payout,r,T):
     """
     Discount a payoff from maturity back to present value.
+
+    Parameters
+    ----------
+    payout : array-like | float
+        Payoff amount(s) to discount.
+    r : float
+        Continuous risk-free rate used for discounting.
+    T : float
+        Time to maturity in years.
     """
     return payout*np.exp(-r*T)
 
 def valuation(path,K,B,r,AMR=True):
     """
     Value a shark fin option by applying the knock-out barrier to simulated paths.
-    AMR: if American style
+
+    Parameters
+    ----------
+    path : numpy.ndarray
+        Simulated price paths with shape ``(N + 1, M)``.
+    K : float
+        Strike price of the call option.
+    B : float
+        Knock-out barrier level.
+    r : float
+        Continuous discount rate.
+    AMR : bool, optional
+        If ``True``, treat the payoff as path-dependent (American monitoring of
+        the barrier); if ``False``, only the terminal price is inspected.
+
+    Returns
+    -------
+    numpy.ndarray
+        Discounted payoff for each path.
     """
     ST = path[-1, :]   
     T = path.shape[0]/252

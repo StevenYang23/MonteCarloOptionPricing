@@ -15,8 +15,13 @@ def dupire_local_vol(calls, spline, n_t, n_y):
     ----------
     calls : pandas.DataFrame
         Option dataset containing implied volatilities and associated metadata.
+        Only out-of-the-money quotes are used when constructing the surface.
     spline : list
         Collection of spline interpolants for each maturity slice.
+    n_t : int
+        Number of points in the maturity direction of the output grid.
+    n_y : int
+        Number of points in the moneyness direction of the output grid.
 
     Returns
     -------
@@ -25,13 +30,13 @@ def dupire_local_vol(calls, spline, n_t, n_y):
         ``get_local_variance``.
     """
     calls_ = calls.copy()
-    calls_ = calls[calls["in_out"] == "out"].copy()  # Use only out-of-the-money options
-    local_vol_surface = get_local_variance(calls, spline, n_t, n_y)
+    calls_ = calls_[calls_["in_out"] == "out"].copy()  # Use only out-of-the-money options
+    local_vol_surface = get_local_variance(calls_, spline, n_t, n_y)
     return local_vol_surface
 
 def get_spline(calls):
     """
-    Pre-compute cubic splines in strike for each maturity to improve efficiency.
+    Build cubic splines in strike (or log-moneyness) for each maturity.
 
     Parameters
     ----------
@@ -42,8 +47,10 @@ def get_spline(calls):
     -------
     list
         List of `scipy.interpolate.CubicSpline` objects indexed by maturity.
+        When fewer than two unique strikes exist for a maturity, the spline
+        entry is set to ``None`` so downstream code can decide how to handle it.
     """
-    # sort by ttm and strike to ensure proper ordering for spline construction 
+    # Sort by maturity and strike to ensure proper ordering for spline construction.
     calls = calls.sort_values(["ttm","y"])
     spline = []
     for m in calls["ttm"].unique():
@@ -52,7 +59,7 @@ def get_spline(calls):
         unique_pairs = subset.drop_duplicates(subset=["y"], keep="first").sort_values("y")
         moneyness = unique_pairs["y"].values
         if len(moneyness) < 2:
-            spline.append(cs_k)
+            spline.append(None)
             continue
         sample_volatility = unique_pairs["w"].values
         # moneyness = calls.loc[calls["ttm"] == m]["y"]
@@ -81,10 +88,21 @@ def get_total_v(data, spline, y, t):
     float
         Total variance at the specified log-moneyness and maturity.
     """
-    total_v = [float(cs(y)) for cs in spline]
+    maturities = data["ttm"].unique()
+    total_v = []
+    valid_t = []
+    for m, cs in zip(maturities, spline):
+        if cs is None:
+            continue
+        total_v.append(float(cs(y)))
+        valid_t.append(m)
+    if not total_v:
+        return float("nan")
+    if len(total_v) == 1:
+        return total_v[0]
     f = interp1d(
-        x=data["ttm"].unique(),
-        y=total_v,
+        x=np.asarray(valid_t),
+        y=np.asarray(total_v),
         kind="linear",
         fill_value="extrapolate",
     )  # Linear interpolation across maturities for total variance
@@ -93,10 +111,25 @@ def get_total_v(data, spline, y, t):
 
 def diff(data, spline, y, t):
     """
-    Approximate the partial derivatives of the total variance surface.
+    Approximate the partial derivatives of the total variance surface using
+    symmetric finite differences.
 
-    This uses finite difference approximations in both maturity and
-    log-moneyness directions.
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Option dataset containing total variance information.
+    spline : list
+        Precomputed splines from ``get_spline``.
+    y : float
+        Log-moneyness location at which to evaluate the derivatives.
+    t : float
+        Time to maturity.
+
+    Returns
+    -------
+    tuple[float, float, float]
+        Approximations of ``∂w/∂t``, ``∂w/∂y`` and ``∂²w/∂y²`` evaluated at
+        ``(y, t)``.
     """
     yt = get_total_v(data,spline,y,t)
     y_up = get_total_v(data,spline,y*(1+0.001),t)
@@ -110,10 +143,26 @@ def diff(data, spline, y, t):
 
 def local_v(data, spline, y, t):
     """
-    Placeholder for the Dupire local variance calculation at a single point.
+    Evaluate the Dupire local variance formula at a single (log-moneyness, maturity)
+    point using the supplied total variance surface.
 
-    The commented section illustrates the intended Dupire formula. The current
-    implementation returns a random volatility for demonstration purposes.
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Option dataset containing total variance information.
+    spline : list
+        Precomputed splines from ``get_spline``.
+    y : float
+        Log-moneyness coordinate.
+    t : float
+        Time to maturity.
+
+    Returns
+    -------
+    float
+        Local volatility level implied by Dupire's formula. Negative values,
+        which may occur because of numerical noise or arbitrage, are clipped to
+        a small positive floor before taking the square root.
     """
     w = get_total_v(data,spline,y,t)
     dw_dt,dw_dy,dw_dy2 = diff(data,spline,y,t)
@@ -129,6 +178,22 @@ def local_v(data, spline, y, t):
 def get_local_variance(data, spline,n_t,n_y):
     """
     Generate a grid of local variance values over log-moneyness and maturity.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Option dataset used by ``local_v`` to evaluate total variance.
+    spline : list
+        Precomputed splines from ``get_spline``.
+    n_t : int
+        Number of grid points along the maturity axis.
+    n_y : int
+        Number of grid points along the log-moneyness axis.
+
+    Returns
+    -------
+    numpy.ndarray
+        Local variance values arranged as an array of shape ``(n_y, n_t)``.
     """
     t_array = np.linspace(data["ttm"].min(),data["ttm"].max(),n_t)
     y_array = np.linspace(data["y"].min(),data["y"].max(),n_y)
@@ -144,26 +209,26 @@ def get_local_variance(data, spline,n_t,n_y):
 def get_local_vol_path(calls, spline, y, T, N, n_t):
     """
     Sample the local volatility term structure along a single (y, T) path.
-    
-    Parameters:
-    -----------
-    calls : pd.DataFrame
-        Option data (used by `local_v`; may be unused if `spline` is sufficient)
-    spline : list of CubicSpline (or callable)
-        Precomputed volatility interpolants per maturity
+
+    Parameters
+    ----------
+    calls : pandas.DataFrame
+        Option data used by ``local_v`` when evaluating total variance.
+    spline : list
+        Precomputed volatility interpolants per maturity.
     y : float
-        Moneyness (e.g., log(K/F) or K/S0) for the path
+        Moneyness (e.g., log(K/F) or K/S0) for the path.
     T : float
-        Total maturity (in years)
+        Total maturity (in years).
     N : int
-        Number of time steps in the *output* local_vol_path (e.g., for SDE simulation)
+        Number of time steps in the output ``local_vol_path`` (e.g., for SDE simulation).
     n_t : int
-        Number of points for *intermediate* sampling (higher → smoother interpolation)
-    
-    Returns:
-    --------
-    local_vol_path : np.ndarray of shape (N,)
-        Local volatility values at times t_i = i * T / (N-1), i=0,...,N-1
+        Number of intermediate samples used before interpolating down to ``N`` points.
+
+    Returns
+    -------
+    numpy.ndarray
+        Local volatility values at times ``t_i = i * T / (N - 1)``, ``i = 0, …, N - 1``.
     """
     t_fine = np.linspace(0, T, n_t)
     v = np.empty(n_t)
@@ -202,8 +267,8 @@ def dupire_simulation(mu_annual, y, S0, T, N, M, calls, spline, n_t):
     ----------
     mu_annual : float
         Annualized drift of the underlying asset.
-    K : float
-        Strike price used to sample local volatility.
+    y : float
+        Log-moneyness level used to extract the local volatility path.
     S0 : float
         Initial asset price.
     T : float
@@ -216,8 +281,8 @@ def dupire_simulation(mu_annual, y, S0, T, N, M, calls, spline, n_t):
         Dataset containing market option information.
     spline : list
         Spline interpolants generated by ``get_spline``.
-    N_t : int
-        Number of time steps for local volatility grid.
+    n_t : int
+        Number of intermediate samples used when constructing the local volatility path.
 
     Returns
     -------
