@@ -40,7 +40,7 @@ def plot_two_interp(interp, regres, calls):
         specs=[[{'type': 'scene'}, {'type': 'scene'}]],
         subplot_titles=(
             "Cubic Spline",
-            "Linear Regression"
+            "Regression"
         )
     )
 
@@ -75,6 +75,6 @@ def plot_two_interp(interp, regres, calls):
     fig.update_layout(
         height=500,
         width=1200,
-        title_text="Implied Volatility Surface: Cubic vs Linear Interpolation"
+        title_text="Implied Volatility Surface:Interpolation vs Regression"
     )
     fig.show()

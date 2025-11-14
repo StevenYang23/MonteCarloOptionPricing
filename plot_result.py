@@ -49,30 +49,30 @@ def plot_v_paths(V_path_dupire,V_path_Heston,V_path_Garch,V_path_GBM):
         model. Shapes may differ depending on the simulation framework.
     """
     fig, axs = plt.subplots(2, 2, figsize=(12, 8))
-    axs[0, 0].plot(V_path_dupire, label="Dupire Local Vol")
+    axs[0, 0].plot(V_path_dupire, label="Local Volatility")
     axs[0, 0].set_title("Dupire Local Vol")
     axs[0, 0].set_xlabel("Time Step")
-    axs[0, 0].set_ylabel("Volatility or Variance")
+    axs[0, 0].set_ylabel("Volatility")
     axs[0, 0].legend()
     axs[0, 1].plot(V_path_Heston, label="Heston Vol")
     axs[0, 1].set_title("Heston Vol (A Random Path)")
     axs[0, 1].set_xlabel("Time Step")
-    axs[0, 1].set_ylabel("Volatility or Variance")
+    axs[0, 1].set_ylabel("Volatility")
     axs[0, 1].legend()
     axs[1, 0].plot(V_path_Garch, label="GARCH Vol")
     axs[1, 0].set_title("GARCH Vol (A Random Path)")
     axs[1, 0].set_xlabel("Time Step")
-    axs[1, 0].set_ylabel("Volatility or Variance")
+    axs[1, 0].set_ylabel("Volatility")
     axs[1, 0].legend()
     axs[1, 1].plot(V_path_GBM, label="GBM Vol (constant)")
     axs[1, 1].set_title("Constant Vol GBM")
     axs[1, 1].set_xlabel("Time Step")
-    axs[1, 1].set_ylabel("Volatility or Variance")
+    axs[1, 1].set_ylabel("Volatility")
     axs[1, 1].legend()
     plt.tight_layout()
     plt.show()
 
-def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts, bigtitle, dist=True, K=None):
+def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant_vol_payouts, bigtitle, dist=True, K=None, B=None):
     """
     Visualize payout distributions and optionally overlay log-normal fits.
 
@@ -122,6 +122,8 @@ def plot_log_norm(local_vol_payouts, heston_payouts, Garch_Vol_payouts, Constant
         # Add vertical line at K if provided
         if K is not None:
             ax.axvline(K, color='gray', linestyle='--', linewidth=1.5, label=f'Strike K={K}')
+        if B is not None:
+            ax.axvline(B, color='red', linestyle='--', linewidth=1.5, label=f'Knock-out barrier B={B}')
 
         ax.set_xlabel("Payout")
         ax.set_ylabel("Density")
