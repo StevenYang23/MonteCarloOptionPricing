@@ -219,12 +219,6 @@ Delta, Gamma, and Vega surfaces computed via Monte Carlo finite differences:
 
 ## 🔧 Key Components
 
-### Data Loading (`Load_data_yfiance.py`)
-- Retrieves option chain data from Yahoo Finance
-- Computes implied volatilities using Black-Scholes
-- Calculates forward prices and dividend yields via put-call parity
-- Filters and preprocesses data for calibration
-
 ### Model Calibration
 - **Heston**: Calibrates 5 parameters (v₀, κ, θ, ρ, σ) to market prices
 - **GARCH**: Estimates ω, α, β from historical return data
