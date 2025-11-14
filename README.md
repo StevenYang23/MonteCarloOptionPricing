@@ -101,11 +101,11 @@ Time-varying conditional volatility model that captures volatility clustering:
 
 ## 🔧 Key Components
 
-<h3 style="font-size: 1.5em;">Data Loading (`Load_data_yfiance.py`)</h3>
+<h3 style="font-size: 1.5em; font-weight: bold;">Data Loading (`Load_data_yfiance.py`)</h3>
 
 Retrieves option chain data from Yahoo Finance, computes implied volatilities using Black-Scholes, and calculates forward prices and dividend yields via put-call parity. The system automatically fetches real-time option data and prepares it for model calibration.
 
-<h3 style="font-size: 1.5em;">Model Calibration</h3>
+<h3 style="font-size: 1.5em; font-weight: bold;">Model Calibration</h3>
 
 Calibrate volatility models to market data. Each model uses different calibration approaches:
 
@@ -116,7 +116,7 @@ Calibrate volatility models to market data. Each model uses different calibratio
 **Local Volatility Surface:**
 <img src="demo_img/local_vol_surface.png" alt="Local Volatility Surface" width="800" height="600">
 
-<h3 style="font-size: 1.5em;">Monte Carlo Simulation</h3>
+<h3 style="font-size: 1.5em; font-weight: bold;">Monte Carlo Simulation</h3>
 
 Generate price and volatility paths using advanced numerical methods. The framework implements:
 
@@ -133,7 +133,7 @@ Generate price and volatility paths using advanced numerical methods. The framew
 **Simulated Asset Price Distributions:**
 <img src="demo_img/Simulated_Asset_Price.png" alt="Simulated Asset Price Paths" width="800" height="600">
 
-<h3 style="font-size: 1.5em;">Valuation Functions</h3>
+<h3 style="font-size: 1.5em; font-weight: bold;">Valuation Functions</h3>
 
 Price exotic options with path-dependent features. The framework supports:
 
@@ -147,7 +147,7 @@ Price exotic options with path-dependent features. The framework supports:
 **Option Valuation Results:**
 <img src="demo_img/Valuation.png" alt="Option Valuation" width="800" height="600">
 
-<h3 style="font-size: 1.5em;">Statistical Analysis</h3>
+<h3 style="font-size: 1.5em; font-weight: bold;">Statistical Analysis</h3>
 
 Perform comprehensive statistical analysis on model outputs:
 
@@ -159,7 +159,7 @@ Perform comprehensive statistical analysis on model outputs:
 **Confidence Intervals Comparison:**
 <img src="demo_img/Test_Confidence_interval.png" alt="Confidence Intervals" width="800" height="600">
 
-<h3 style="font-size: 1.5em;">Greeks Computation</h3>
+<h3 style="font-size: 1.5em; font-weight: bold;">Greeks Computation</h3>
 
 Compute option sensitivities (Delta, Gamma, Vega) using Monte Carlo finite differences. The framework visualizes how option sensitivities vary across spot prices and maturities.
 
