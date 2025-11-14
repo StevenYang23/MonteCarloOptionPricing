@@ -18,7 +18,7 @@ A comprehensive Monte Carlo simulation framework for pricing exotic options (spe
 
 This project implements and compares multiple volatility modeling approaches for Monte Carlo option pricing:
 
-1. **Constant Volatility GBM** (Baseline) - Traditional Black-Scholes framework, Constant Volatility
+1. **Constant Volatility GBM** (Baseline) - Traditional Black-Scholes framework
 2. **Dupire Local Volatility** - Market-implied local volatility surface
 3. **Heston Stochastic Volatility** - Mean-reverting variance process
 4. **GARCH(1,1)** - Time-varying conditional volatility
@@ -72,7 +72,7 @@ MonteCarloOptionPricing/
 ## ✨ Features
 
 - **Multi-Model Comparison**: Compare four different volatility modeling approaches
-- **Market Data Integration**: Automatic option chain data retrieval using `yfinance`
+- **Market Data Integration**: Real-time option chain data retrieval
 - **Volatility Surface Construction**: Build local volatility surface from market data
 - **Monte Carlo Simulation**: High-performance path simulation (100,000+ paths)
 - **Exotic Option Pricing**: Shark Fin barrier option valuation with American-style barrier monitoring
@@ -101,11 +101,11 @@ Time-varying conditional volatility model that captures volatility clustering:
 
 ## 🔧 Key Components
 
-### Data Loading (`Load_data_yfiance.py`)
+<h3 style="font-size: 1.5em;">Data Loading (`Load_data_yfiance.py`)</h3>
 
 Retrieves option chain data from Yahoo Finance, computes implied volatilities using Black-Scholes, and calculates forward prices and dividend yields via put-call parity. The system automatically fetches real-time option data and prepares it for model calibration.
 
-### Model Calibration
+<h3 style="font-size: 1.5em;">Model Calibration</h3>
 
 Calibrate volatility models to market data. Each model uses different calibration approaches:
 
@@ -116,7 +116,7 @@ Calibrate volatility models to market data. Each model uses different calibratio
 **Local Volatility Surface:**
 <img src="demo_img/local_vol_surface.png" alt="Local Volatility Surface" width="800" height="600">
 
-### Monte Carlo Simulation
+<h3 style="font-size: 1.5em;">Monte Carlo Simulation</h3>
 
 Generate price and volatility paths using advanced numerical methods. The framework implements:
 
@@ -124,17 +124,16 @@ Generate price and volatility paths using advanced numerical methods. The framew
 - Correlated Brownian motions for Heston model
 - Path-dependent barrier monitoring for exotic options
 - 100,000+ simulation paths for statistical accuracy
-
-**Simulated Asset Price Paths:**
-<img src="demo_img/Simulated_Asset_Price.png" alt="Simulated Asset Price Paths" width="800" height="600">
-
-**Monte Carlo Paths Comparison:**
+**Monte Carlo Paths:**
 <img src="demo_img/MC_path.png" alt="Monte Carlo Paths" width="800" height="600">
 
-**Volatility Paths Evolution:**
+**Volatility Paths:**
 <img src="demo_img/MC_vol_path.png" alt="Volatility Paths" width="800" height="600">
 
-### Valuation Functions
+**Simulated Asset Price Distributions:**
+<img src="demo_img/Simulated_Asset_Price.png" alt="Simulated Asset Price Paths" width="800" height="600">
+
+<h3 style="font-size: 1.5em;">Valuation Functions</h3>
 
 Price exotic options with path-dependent features. The framework supports:
 
@@ -148,14 +147,7 @@ Price exotic options with path-dependent features. The framework supports:
 **Option Valuation Results:**
 <img src="demo_img/Valuation.png" alt="Option Valuation" width="800" height="600">
 
-### Greeks Computation
-
-Compute option sensitivities (Delta, Gamma, Vega) using Monte Carlo finite differences. The framework visualizes how option sensitivities vary across spot prices and maturities.
-
-**Option Greeks Surfaces:**
-<img src="demo_img/Greeks.png" alt="Option Greeks" width="800" height="600">
-
-### Statistical Analysis
+<h3 style="font-size: 1.5em;">Statistical Analysis</h3>
 
 Perform comprehensive statistical analysis on model outputs:
 
@@ -166,6 +158,13 @@ Perform comprehensive statistical analysis on model outputs:
 
 **Confidence Intervals Comparison:**
 <img src="demo_img/Test_Confidence_interval.png" alt="Confidence Intervals" width="800" height="600">
+
+<h3 style="font-size: 1.5em;">Greeks Computation</h3>
+
+Compute option sensitivities (Delta, Gamma, Vega) using Monte Carlo finite differences. The framework visualizes how option sensitivities vary across spot prices and maturities.
+
+**Option Greeks Surfaces:**
+<img src="demo_img/Greeks.png" alt="Option Greeks" width="800" height="600">
 
 ## 📝 Notes
 
@@ -242,15 +241,7 @@ M = 100000
 B = 8500
 ```
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## 📄 License
 
 This project is provided as-is for educational and research purposes.
 
----
-
-**Author**: Monte Carlo Option Pricing Research Team  
-**Last Updated**: 2025
