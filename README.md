@@ -1,6 +1,6 @@
-# Monte Carlo Option Pricing: Volatility Modeling Comparison
+# VOLATILITY IS ALL YOU NEED
 
-**VOLATILITY IS ALL YOU NEED**
+**Monte Carlo Option Pricing: Volatility Modeling Comparison**
 
 A comprehensive Monte Carlo simulation framework for pricing exotic options (specifically Shark Fin barrier options) using multiple stochastic volatility models. This project compares four different volatility modeling approaches and evaluates their performance through extensive simulations and statistical analysis.
 
