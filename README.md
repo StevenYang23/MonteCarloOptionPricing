@@ -53,6 +53,7 @@ MonteCarloOptionPricing/
 │   ├── plot_result.py        # Path and distribution plots
 │   ├── plot_loc_vol_surface.py  # Local volatility surface
 │   ├── plot_2_interp.py     # Interpolation comparison
+│   ├── smile.py             # Implied volatility smile plots
 │   └── plot_data_hist.py    # Data distribution plots
 │
 ├── DataSet/                  # Market data storage
@@ -79,6 +80,7 @@ MonteCarloOptionPricing/
 - **Greeks Calculation**: Delta, Gamma, and Vega computation via finite differences
 - **Statistical Analysis**: Confidence intervals and distribution analysis
 - **Comprehensive Visualization**: Path plots, volatility surfaces, payoff distributions, and Greeks
+- **Volatility Smile Diagnostics**: Quickly compare market vs fitted smiles for chosen maturities
 
 ## 📊 Volatility Models
 
